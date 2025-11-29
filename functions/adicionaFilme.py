@@ -18,7 +18,7 @@ def _get_usuario_db():
     Retorna uma instância do TinyDB para o arquivo de filmes do usuário.
     O TinyDB cria o arquivo automaticamente caso não exista.
     """
-    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2)
+    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
     # Garante que a tabela 'usuarios' exista
     db.table('usuarios')
     return db
@@ -45,24 +45,30 @@ def _carrega_json_resiliente(path):
         return data, 'latin-1'
 
 
+def _get_catalogo_table():
+    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
+    return db.table("Filmes")
+
 def _bootstrap_catalogo_db():
     """
-    Garante que o catálogo esteja em formato TinyDB. Aceita os formatos
-    antigos (dict com chave 'filmes' ou lista pura) e converte se necessário.
+    Garante que o arquivo de catálogo esteja no formato esperado pelo TinyDB.
+    Se estiver no formato antigo (lista simples ou dict com chave 'filmes'),
+    converte automaticamente para o formato interno do TinyDB.
     """
     if not os.path.exists(CATALOGO_JSON):
-        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
     try:
-        if os.path.getsize(CATALOGO_JSON) == 0:
-            raise json.JSONDecodeError('empty', '', 0)
-        raw_data, _ = _carrega_json_resiliente(CATALOGO_JSON)
+        with open(CATALOGO_JSON, 'r', encoding='utf-8') as f:
+            if os.path.getsize(CATALOGO_JSON) == 0:
+                raise json.JSONDecodeError('empty', '', 0)
+            raw_data = json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
-        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
-    if isinstance(raw_data, dict) and '_default' in raw_data:
+    if isinstance(raw_data, dict) and ("_default" in raw_data or "Filmes" in raw_data):
         return
 
     filmes = []
@@ -71,12 +77,13 @@ def _bootstrap_catalogo_db():
     elif isinstance(raw_data, list):
         filmes = raw_data
 
-    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2)
-    db.truncate()
-    if filmes:
-        db.insert_multiple(filmes)
-    db.close()
 
+    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
+    table = db.table("Filmes")
+    table.truncate()
+    if filmes:
+        table.insert_multiple(filmes)
+    db.close()
 
 def _obter_filme_catalogo(payload_filme):
     """
@@ -87,22 +94,25 @@ def _obter_filme_catalogo(payload_filme):
         return None
 
     _bootstrap_catalogo_db()
-    with TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2) as db:
-        Filme = Query()
-        filme_catalogo = None
+    db = _get_catalogo_table()
+    filmes = db.all()
+    Filme = Query()
+    filme_catalogo = None
 
-        filme_id = payload_filme.get('id')
-        if filme_id is not None:
-            filme_catalogo = db.get(Filme.id == filme_id)
+    filme_id = payload_filme.get('id')
+    if filme_id is not None:
+        filme_catalogo = db.get(Filme.id == filme_id)
 
-        if not filme_catalogo:
-            nome_payload = payload_filme.get('nome')
-            if isinstance(nome_payload, str):
-                filme_catalogo = db.get(
-                    Filme.nome.test(lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_payload.lower().strip())
+    if not filme_catalogo:
+        nome_payload = payload_filme.get('nome')
+        if isinstance(nome_payload, str):
+            filme_catalogo = db.get(
+                Filme.nome.test(
+                    lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip()
                 )
+            )
 
-        return filme_catalogo.copy() if filme_catalogo else None
+    return filme_catalogo.copy() if filme_catalogo else None
 
 
 def adicionaFilme(payload):
@@ -247,8 +257,8 @@ def disparaNotificacaoAdicao():
 # Teste local rápido
 if __name__ == '__main__':
     exemplo = {
-        'usuario': 'Renan',
-        'filme': {'id': 2, 'nome': 'Corrida para o Infinito', 'descricao': 'Mesmo do catálogo'},
+        'usuario': 'João',
+        'filme': {'id': 2, 'descricao': 'Mesmo do catálogo'},
         'status': 'quero assistir'
     }
     print(adicionaFilme(exemplo)['body'])

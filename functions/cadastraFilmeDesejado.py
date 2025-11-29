@@ -18,36 +18,39 @@ def _get_usuario_db():
     """
     Retorna uma instância do TinyDB para o arquivo de filmes do usuário.
     """
-    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2)
+    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2, encoding='utf-8' )
     db.table('usuarios')
     return db
 
 
 def _get_desejados_db():
-    """
-    Retorna uma instância do TinyDB para o arquivo de filmes desejados.
-    """
-    return TinyDB(DESEJADOS_JSON, ensure_ascii=False, indent=2)
+    db = TinyDB(DESEJADOS_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
+    return db.table("FilmesDesejados")
 
+def _get_catalogo_table():
+    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
+    return db.table("Filmes")
 
 def _bootstrap_catalogo_db():
     """
-    Garante que o catálogo esteja em formato TinyDB.
+    Garante que o arquivo de catálogo esteja no formato esperado pelo TinyDB.
+    Se estiver no formato antigo (lista simples ou dict com chave 'filmes'),
+    converte automaticamente para o formato interno do TinyDB.
     """
     if not os.path.exists(CATALOGO_JSON):
-        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
     try:
-        if os.path.getsize(CATALOGO_JSON) == 0:
-            raise json.JSONDecodeError('empty', '', 0)
         with open(CATALOGO_JSON, 'r', encoding='utf-8') as f:
+            if os.path.getsize(CATALOGO_JSON) == 0:
+                raise json.JSONDecodeError('empty', '', 0)
             raw_data = json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
-        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
-    if isinstance(raw_data, dict) and '_default' in raw_data:
+    if isinstance(raw_data, dict) and ("_default" in raw_data or "Filmes" in raw_data):
         return
 
     filmes = []
@@ -56,10 +59,12 @@ def _bootstrap_catalogo_db():
     elif isinstance(raw_data, list):
         filmes = raw_data
 
-    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2)
-    db.truncate()
+
+    db = TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
+    table = db.table("Filmes")
+    table.truncate()
     if filmes:
-        db.insert_multiple(filmes)
+        table.insert_multiple(filmes)
     db.close()
 
 
@@ -101,12 +106,15 @@ def _buscar_filme_catalogo(nome_filme):
     Retorna o filme se encontrado, None caso contrário.
     """
     _bootstrap_catalogo_db()
-    with TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2) as db:
-        Filme = Query()
-        filme = db.get(
-            Filme.nome.test(lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip())
-        )
-        return filme.copy() if filme else None
+    db = _get_catalogo_table()
+    filmes = db.all()
+    Filme = Query()
+    filme = db.get(
+        Filme.nome.test(
+                lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip()
+            )
+    )
+    return filme.copy() if filme else None
 
 
 def _buscar_filme_desejado(nome_filme):
@@ -117,12 +125,13 @@ def _buscar_filme_desejado(nome_filme):
     if not os.path.exists(DESEJADOS_JSON) or os.path.getsize(DESEJADOS_JSON) == 0:
         return None
     
-    with _get_desejados_db() as db:
-        FilmeDesejado = Query()
-        filme = db.get(
-            FilmeDesejado.nome.test(lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip())
-        )
-        return filme.copy() if filme else None
+    db = _get_desejados_db()
+    FilmeDesejado = Query()
+    filme = db.get(
+        FilmeDesejado.nome.test(lambda v: isinstance(v, str) and v.lower().strip() == nome_filme.lower().strip())
+    )
+    return filme.copy() if filme else None
+
 
 
 def cadastraFilmeDesejado(payload):
@@ -231,12 +240,13 @@ def validaFilmeDesejado():
             usuarios_interessados.append(usuario_id)
             
             # Atualiza o registro
-            with _get_desejados_db() as db:
-                FilmeDesejado = Query()
-                db.update(
-                    {'usuarios_interessados': usuarios_interessados},
-                    FilmeDesejado.nome.test(lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip())
-                )
+            db = _get_desejados_db()
+            FilmeDesejado = Query()
+            db.update(
+                {'usuarios_interessados': usuarios_interessados},
+                FilmeDesejado.nome.test(lambda v: isinstance(v, str) and v.lower().strip() == nome_filme.lower().strip())
+            )
+
 
         filaRetornoDesejados.put({
             'sucesso': True,
@@ -258,8 +268,9 @@ def validaFilmeDesejado():
         'cadastrado_em': datetime.utcnow().isoformat() + 'Z'
     }
 
-    with _get_desejados_db() as db:
-        db.insert(novo_filme_desejado)
+    db = _get_desejados_db()
+    db.insert(novo_filme_desejado)
+
 
     filaRetornoDesejados.put({
         'sucesso': True,
@@ -297,7 +308,7 @@ if __name__ == '__main__':
     # Teste 1: Cadastrar novo filme desejado
     print("=== Teste 1: Cadastrar novo filme desejado ===")
     exemplo1 = {
-        'usuario': 'Débora',
+        'usuario': 'João',
         'nome_filme': 'Matrix 5'
     }
     resultado1 = cadastraFilmeDesejado(exemplo1)
@@ -314,12 +325,4 @@ if __name__ == '__main__':
     print(resultado2['body'])
     print()
 
-    # Teste 3: Tentar cadastrar filme já monitorado
-    print("=== Teste 3: Filme já monitorado ===")
-    exemplo3 = {
-        'usuario': 'Débora',
-        'nome_filme': 'Matrix 5'
-    }
-    resultado3 = cadastraFilmeDesejado(exemplo3)
-    print(resultado3['body'])
 

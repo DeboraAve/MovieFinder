@@ -11,7 +11,7 @@ def _get_usuario_db():
     """
     Retorna uma instância do TinyDB para o arquivo de filmes do usuário.
     """
-    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2)
+    db = TinyDB(USUARIO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
     db.table('usuarios')
     return db
 
@@ -20,7 +20,7 @@ def _get_catalogo_db():
     """
     Retorna uma instância do TinyDB para o catálogo de filmes.
     """
-    return TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2)
+    return TinyDB(CATALOGO_JSON, ensure_ascii=False, indent=2, encoding='utf-8')
 
 
 def listarCatalogoUsuario(usuario_id):

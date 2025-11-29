@@ -11,6 +11,9 @@ filaEncontrado = Queue()  # Fila que recebe os filmes encontrados/validados
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOGO_DB_PATH = os.path.join(BASE_DIR, 'data', 'filmes.json')
 
+def _get_catalogo_table():
+    db = TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2, encoding='utf-8')
+    return db.table("Filmes")
 
 def _bootstrap_catalogo_db():
     """
@@ -19,7 +22,7 @@ def _bootstrap_catalogo_db():
     converte automaticamente para o formato interno do TinyDB.
     """
     if not os.path.exists(CATALOGO_DB_PATH):
-        TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
     try:
@@ -28,10 +31,10 @@ def _bootstrap_catalogo_db():
                 raise json.JSONDecodeError('empty', '', 0)
             raw_data = json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
-        TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2).close()
+        TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2, encoding='utf-8').close()
         return
 
-    if isinstance(raw_data, dict) and '_default' in raw_data:
+    if isinstance(raw_data, dict) and ("_default" in raw_data or "Filmes" in raw_data):
         return
 
     filmes = []
@@ -40,11 +43,14 @@ def _bootstrap_catalogo_db():
     elif isinstance(raw_data, list):
         filmes = raw_data
 
-    db = TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2)
-    db.truncate()
+
+    db = TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2, encoding='utf-8')
+    table = db.table("Filmes")
+    table.truncate()
     if filmes:
-        db.insert_multiple(filmes)
+        table.insert_multiple(filmes)
     db.close()
+
 
 def similaridade(a, b):
     """
@@ -121,12 +127,15 @@ def validaFilme():
         nome_filme = filaBuscaFilme.get(timeout=1)
 
         _bootstrap_catalogo_db()
-        with TinyDB(CATALOGO_DB_PATH, ensure_ascii=False, indent=2) as db:
-            filmes = db.all()
-            Filme = Query()
-            match_doc = db.get(
-                Filme.nome.test(lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip())
+        db = _get_catalogo_table()
+        filmes = db.all()
+        Filme = Query()
+        match_doc = db.get(
+            Filme.nome.test(
+                lambda valor: isinstance(valor, str) and valor.lower().strip() == nome_filme.lower().strip()
             )
+        )
+
 
         if not filmes:
             filaEncontrado.put({

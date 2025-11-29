@@ -1,0 +1,68 @@
+{
+  "usuarios": {
+    "1": {
+      "nome": "Débora",
+      "filmes": [
+        {
+          "id": 1,
+          "nome": "O Enigma da Aurora",
+          "descricao": "Uma cientista descobre um fenômeno misterioso que ameaça alterar o clima global.",
+          "status": "assistido",
+          "adicionado_em": "2025-11-27T23:39:30.722496Z"
+        },
+        {
+          "id": 4,
+          "nome": "Corrida para o Infinito",
+          "descricao": "Pilotos de alta velocidade competem em uma liga futurista onde tudo pode acontecer.",
+          "status": "quero assistir",
+          "adicionado_em": "2025-11-28T23:04:26.301318Z"
+        },
+        {
+          "id": 5,
+          "nome": "O Jardim das Horas",
+          "descricao": "Uma jovem descobre um portal em seu jardim que a leva para diferentes momentos no tempo.",
+          "status": "quero assistir",
+          "adicionado_em": "2025-11-28T16:30:05.614560Z"
+        }
+      ]
+    },
+    "2": {
+      "nome": "Renan",
+      "filmes": [
+        {
+          "id": 2,
+          "nome": "Sombras do Atlântico",
+          "descricao": "Um mergulhador investiga o desaparecimento de um submarino experimental.",
+          "status": "quero assistir",
+          "adicionado_em": "2025-11-27T23:40:32.685805Z"
+        },
+        {
+          "id": 4,
+          "nome": "Corrida para o Infinito",
+          "descricao": "Pilotos de alta velocidade competem em uma liga futurista onde tudo pode acontecer.",
+          "status": "assistido",
+          "adicionado_em": "2025-11-28T23:05:09.483883Z"
+        }
+      ]
+    },
+    "3": {
+      "nome": "João",
+      "filmes": [
+        {
+          "id": 5,
+          "nome": "O Jardim das Horas",
+          "descricao": "Uma jovem descobre um portal em seu jardim que a leva para diferentes momentos no tempo.",
+          "status": "quero assistir",
+          "adicionado_em": "2025-11-28T16:30:44.100009Z"
+        },
+        {
+          "id": 2,
+          "nome": "Sombras do Atlântico",
+          "descricao": "Um mergulhador investiga o desaparecimento de um submarino experimental.",
+          "status": "quero assistir",
+          "adicionado_em": "2025-11-28T21:51:08.025615Z"
+        }
+      ]
+    }
+  }
+}

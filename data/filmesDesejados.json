@@ -1,0 +1,28 @@
+{
+  "FilmesDesejados": {
+    "1": {
+      "nome": "Matrix 5",
+      "usuarios_interessados": [
+        1,
+        2,
+        3
+      ],
+      "cadastrado_em": "2025-11-27T23:16:15.100215Z"
+    },
+    "2": {
+      "nome": "Bananas de Pijama",
+      "usuarios_interessados": [
+        2,
+        1
+      ],
+      "cadastrado_em": "2025-11-28T00:23:15.519157Z"
+    },
+    "3": {
+      "nome": "Meninas Malvadas",
+      "usuarios_interessados": [
+        1
+      ],
+      "cadastrado_em": "2025-11-28T23:09:35.345579Z"
+    }
+  }
+}
